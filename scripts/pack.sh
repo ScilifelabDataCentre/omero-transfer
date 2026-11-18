@@ -26,7 +26,7 @@ if [[ -e "$ARCHIVE" ]]; then
 fi
 mkdir -p "$(dirname "$ARCHIVE")"
 
-omero_login "$SRC" "$SRC_GROUP"
+omero_login "$SRC" "$SRC_GROUP" "$SRC_USER" "$SRC_PASSWORD"
 info "Packing $OBJ into $ARCHIVE (this downloads every original file and can take a while)"
 omero transfer pack "$OBJ" "$ARCHIVE"
 logout_quietly

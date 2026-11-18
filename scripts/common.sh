@@ -6,7 +6,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG="${CONFIG:-$REPO_ROOT/transfer.env}"
 MERGE_FLAG=()
-CONFIG_KEYS=(SRC DST OMERO_USER GROUP SRC_GROUP DST_GROUP OBJ ARCHIVE MERGE PORT)
+CONFIG_KEYS=(SRC DST SRC_USER SRC_PASSWORD DST_USER DST_PASSWORD GROUP SRC_GROUP DST_GROUP OBJ ARCHIVE MERGE PORT)
 
 info() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
@@ -62,6 +62,8 @@ load_config() {
 
     SRC_GROUP="${SRC_GROUP:-${GROUP:-}}"
     DST_GROUP="${DST_GROUP:-${GROUP:-}}"
+    SRC_PASSWORD="${SRC_PASSWORD:-}"
+    DST_PASSWORD="${DST_PASSWORD:-}"
     MERGE="${MERGE:-false}"
     PORT="${PORT:-4064}"
     ARCHIVE="${ARCHIVE:-}"
@@ -75,7 +77,7 @@ load_config() {
 
 validate_config() {
     local key val errors=0
-    for key in SRC DST OMERO_USER SRC_GROUP DST_GROUP OBJ ARCHIVE; do
+    for key in SRC DST SRC_USER DST_USER SRC_GROUP DST_GROUP OBJ ARCHIVE; do
         val="${!key:-}"
         if [[ -z "$val" ]]; then
             warn "$key is not set"
@@ -99,8 +101,9 @@ validate_config() {
 print_config() {
     info "Config: $CONFIG"
     printf '    %-10s %s (group %s)\n' "source" "$SRC" "$SRC_GROUP"
+    printf '    %-10s %s\n' "src_user" "$SRC_USER"
     printf '    %-10s %s (group %s)\n' "target" "$DST" "$DST_GROUP"
-    printf '    %-10s %s\n' "user" "$OMERO_USER"
+    printf '    %-10s %s\n' "dst_user" "$DST_USER"
     printf '    %-10s %s\n' "object" "$OBJ"
     printf '    %-10s %s\n' "archive" "$ARCHIVE"
     printf '    %-10s %s\n' "merge" "$MERGE"
@@ -116,8 +119,13 @@ logout_quietly() {
 }
 trap logout_quietly EXIT
 
-# Usage: omero_login HOST GROUP   (prompts for the password)
+# Usage: omero_login HOST GROUP USER [PASSWORD]
 omero_login() {
-    info "Logging in to $1 as $OMERO_USER (group $2)"
-    omero login -u "$OMERO_USER" -s "$1" -p "$PORT" -g "$2"
+    local host="$1" group="$2" user="$3" password="${4:-}"
+    info "Logging in to $host as $user (group $group)"
+    if [[ -n "$password" ]]; then
+        omero login -u "$user" -s "$host" -p "$PORT" -g "$group" -w "$password"
+    else
+        omero login -u "$user" -s "$host" -p "$PORT" -g "$group"
+    fi
 }

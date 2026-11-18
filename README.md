@@ -37,7 +37,8 @@ password.
 | Variable | Meaning |
 | --- | --- |
 | `SRC` / `DST` | Hostnames to pack from and unpack into |
-| `OMERO_USER` | OMERO login, must exist on both servers |
+| `SRC_USER` / `DST_USER` | OMERO login on the source / target server |
+| `SRC_PASSWORD` / `DST_PASSWORD` | Optional; if empty, `omero login` prompts interactively |
 | `GROUP` | Group that owns the data, must exist on both servers |
 | `SRC_GROUP` / `DST_GROUP` | Optional, when the group name differs between servers |
 | `OBJ` | Object to transfer, see [Examples](#examples) |
@@ -76,7 +77,7 @@ networks: pack on one machine, copy the archive, unpack on another.
 To run the CLI by hand, prefix commands with `uv run`:
 
 ```bash
-uv run omero login -u "$OMERO_USER" -s "$SRC" -g "$GROUP"
+uv run omero login -u "$SRC_USER" -s "$SRC" -g "$GROUP"
 uv run omero transfer pack Dataset:1 ~/omero-transfers/dataset1.zip
 uv run omero logout
 ```

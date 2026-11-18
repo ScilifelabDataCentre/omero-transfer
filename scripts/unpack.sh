@@ -23,7 +23,7 @@ print_config
 
 [[ -e "$ARCHIVE" ]] || die "archive not found: $ARCHIVE (run scripts/pack.sh first)"
 
-omero_login "$DST" "$DST_GROUP"
+omero_login "$DST" "$DST_GROUP" "$DST_USER" "$DST_PASSWORD"
 info "Unpacking $ARCHIVE into $DST${MERGE_FLAG[0]:+ (merge)}"
 omero transfer unpack ${MERGE_FLAG[@]+"${MERGE_FLAG[@]}"} "$ARCHIVE"
 logout_quietly
