@@ -1,137 +1,262 @@
 # omero-transfer
 
-Scripts and instructions to transfer data between two OMERO instances with
-[omero-cli-transfer](https://github.com/ome/omero-cli-transfer).
+Copy an image, dataset or project from one OMERO server to another.
 
-`omero transfer` copies an Image, Dataset, Project, Plate or Screen from one OMERO server to
-another. Packing writes the original files plus a `transfer.xml` describing links, annotations and
-ROIs into a single archive; unpacking imports those files on the target server and re-creates the
-structure around them. The scripts in this repo wrap those two steps around a small config file.
+The copy happens in two stages. First the data is **packed**: everything is downloaded from the
+first server into a single file on your computer, called the **archive**. Then it is **unpacked**:
+the archive is uploaded to the second server, which rebuilds the same structure there.
 
-## Prerequisites
+```
+source server  ->  archive on your computer  ->  target server
+```
 
-- [uv](https://docs.astral.sh/uv/getting-started/installation/). It installs Python 3.12 itself
-  if needed.
-- macOS (Intel or Apple Silicon) or Linux x86_64. See [Other platforms](#other-platforms) otherwise.
-- Access to port 4064 on both servers. Some instances are only reachable over a VPN.
-- An account on both servers, and membership in the group you transfer into. The group must
-  already exist on the target; `unpack` does not create it.
-- Free disk space roughly equal to the size of the raw data, since the archive is written locally.
+The scripts in this repo do both stages for you, using
+[omero-cli-transfer](https://github.com/ome/omero-cli-transfer). You fill in one small settings
+file and run one command.
 
-## Quick start
+## Before you start
+
+Check all of these before your first transfer.
+
+- **uv is installed.** This is the tool that installs everything else. Run `uv --version` to check.
+  If it is missing, install it with:
+
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
+
+- **You have an account on both servers.** The usernames can be different on each side.
+- **The group already exists on the target server,** and you are a member of it. A group is the
+  OMERO workspace that owns the data. The transfer will not create one for you.
+- **You have enough free disk space** for the archive, roughly the same size as the data you are
+  copying.
+- **You know what you want to copy.** You need its type (Image, Dataset or Project) and its ID
+  number. In OMERO.web, click the item and the ID is shown in the right-hand panel, for example
+  `Dataset:1`.
+
+This works on macOS and on Linux x86_64. For anything else, see
+[Other platforms](#other-platforms).
+
+## Step by step
+
+### Step 1: Install (first time only)
+
+From the repo folder, run:
 
 ```bash
-uv sync                               # creates .venv with omero-py, omero-cli-transfer, zeroc-ice
-cp transfer.env.example transfer.env  # then edit transfer.env
+uv sync
+```
+
+This downloads Python and the OMERO tools into a `.venv` folder inside the repo. It takes a minute
+or two the first time and is instant afterwards. You never need to "activate" anything; the
+scripts handle that themselves.
+
+### Step 2: Write your settings file
+
+Make your own copy of the template:
+
+```bash
+cp transfer.env.example transfer.env
+```
+
+Open `transfer.env` in a text editor and replace every value written inside angle brackets. A
+finished file looks like this:
+
+```bash
+SRC=omero-staging.c3se.chalmers.se       # server you copy FROM
+DST=omero.scilifelab.se                  # server you copy TO
+SRC_USER=gokhozsa                        # your username on the source server
+SRC_PASSWORD=                            # leave empty, you will be asked
+DST_USER=gokhozsa                        # your username on the target server
+DST_PASSWORD=                            # leave empty, you will be asked
+GROUP=omero_test_20                      # group that owns the data
+OBJ=Dataset:1                            # what to copy
+ARCHIVE=~/omero-transfers/dataset1.zip   # where to put the archive on your computer
+MERGE=false
+```
+
+Two notes on this file:
+
+- Leave the two password lines empty. See [Passwords](#passwords) for why.
+- `transfer.env` is never committed to git, so your details stay on your machine.
+
+### Step 3: Check that everything is ready
+
+```bash
+scripts/check.sh
+```
+
+This confirms your settings are filled in, that both servers answer, and that you have disk space.
+It changes nothing. The last line should read:
+
+```
+==> All checks passed
+```
+
+If it does not, read the warning it printed and see [Troubleshooting](#troubleshooting).
+
+### Step 4: Run the transfer
+
+```bash
 scripts/transfer.sh
 ```
 
-`transfer.sh` runs the preflight checks, packs on the source, unpacks on the target, prints a
-verification checklist and asks before deleting the local archive. Each login prompts for the
-password.
+You will be asked for your password twice, once per server, and nothing is shown as you type. The
+script then packs the data, uploads it, and prints a summary.
 
-## Configuration
+Packing downloads every original file, so a large project can take a long time. Leave the terminal
+window open until it finishes.
 
-`transfer.env` holds the only values that change between transfers:
+### Step 5: Check the result, then clean up
 
-| Variable | Meaning |
-| --- | --- |
-| `SRC` / `DST` | Hostnames to pack from and unpack into |
-| `SRC_USER` / `DST_USER` | OMERO login on the source / target server |
-| `SRC_PASSWORD` / `DST_PASSWORD` | Optional; if empty, `omero login` prompts interactively |
-| `GROUP` | Group that owns the data, must exist on both servers |
-| `SRC_GROUP` / `DST_GROUP` | Optional, when the group name differs between servers |
-| `OBJ` | Object to transfer, see [Examples](#examples) |
-| `ARCHIVE` | Local archive path; `.zip` compresses, `.tar` makes a tarball, no extension writes a directory |
-| `MERGE` | `true` adds into an existing Project/Dataset with the same name on the target |
-| `PORT` | Optional, defaults to 4064 |
+At the end the script pauses and asks whether to delete the archive. Before answering, open the
+target server in OMERO.web and confirm:
 
-Keep several transfers side by side in `configs/` and pick one with `-c`:
+1. The project or dataset is there, with the right number of images and visible thumbnails.
+2. A few images still have their tags, key-value pairs, attachments, ratings and ROIs.
+
+Once you are satisfied, answer `y` to delete the archive from your computer. If anything looks
+wrong, answer `n`: the archive is kept so you can unpack it again without repeating the download.
+
+## Choosing what to transfer
+
+The `OBJ` setting says what gets copied. Everything inside it comes along.
+
+```bash
+OBJ=Image:19          # one image
+OBJ=Dataset:1         # a dataset, with all its images
+OBJ=Project:1         # a project, with all its datasets
+OBJ=Image:19-25       # images 19 to 25
+OBJ=Dataset:1,4,7     # datasets 1, 4 and 7
+```
+
+`Plate` and `Screen` also work, but most servers block them until an administrator changes a
+setting. See [Troubleshooting](#troubleshooting).
+
+## Passwords
+
+Leave `SRC_PASSWORD` and `DST_PASSWORD` empty. The scripts will then ask you for each password
+when they need it, which is the safest option.
+
+You can put passwords in the settings file to run a transfer unattended, but be aware of what that
+means: the file stores them as ordinary readable text, and while the transfer runs, anyone else
+with an account on the same machine can see them in the list of running processes.
+
+## Common tasks
+
+**Add to a dataset that already exists on the target.** By default a second dataset with the same
+name is created. To put the images into the existing one instead:
+
+```bash
+scripts/transfer.sh --merge
+```
+
+**Keep settings for several different transfers.** Put each one in the `configs/` folder and
+choose it with `-c`:
 
 ```bash
 cp configs/staging-to-prod.env.example configs/staging-to-prod.env
 scripts/transfer.sh -c configs/staging-to-prod.env
 ```
 
-Variables set on the command line override the file, which is handy for one-off changes:
+**Change one setting for a single run,** without editing the file:
 
 ```bash
-OBJ=Dataset:4 ARCHIVE=~/omero-transfers/dataset4.zip scripts/transfer.sh
+OBJ=Dataset:4 scripts/transfer.sh
 ```
 
-`transfer.env` and `configs/*.env` are gitignored; only the `.example` templates are tracked.
+**Pack and unpack on different computers.** Useful when no single machine can reach both servers.
+Run the first half where the source is reachable, copy the archive across, then run the second
+half:
 
-## Scripts
+```bash
+scripts/pack.sh        # on the machine that can reach the source
+scripts/unpack.sh      # on the machine that can reach the target
+```
+
+## What is and is not copied
+
+**Copied:** images and their original files, the project and dataset structure, tags, key-value
+pairs, file attachments, ratings, comments, and ROIs.
+
+**Not copied:** Mask ROIs, rendering settings (brightness, contrast and channel colours), and any
+annotation type not listed above.
+
+## Troubleshooting
+
+**The check or a login fails with a connection error.** The server name may be wrong, or the
+server may not be reachable from your network. Run `scripts/check.sh` to see which of the two
+servers is unreachable.
+
+**You see `SecurityViolation`, or an error about the group, when unpacking.** You are not a member
+of that group on the target server, or the group has a different name there. If the names differ,
+add `SRC_GROUP` and `DST_GROUP` to your settings file instead of `GROUP`.
+
+**You see `'transfer' is not a recognized command`.** The tools are not installed. Run `uv sync`
+in the repo folder, and start the scripts from there.
+
+**`uv sync` starts compiling `zeroc-ice` and fails.** There is no prepared package for your
+computer. See [Other platforms](#other-platforms).
+
+**Packing a Plate or Screen fails to download.** OMERO blocks these downloads by default. A server
+administrator has to relax the `omero.policy.binary_access` setting before this can work.
+
+**A second attempt at unpacking creates duplicates, or fails with a `clientPath` error.** A
+previous failed attempt left images behind on the target. Delete those partial imports in
+OMERO.web first, then unpack again.
+
+## Reference
+
+### Settings
+
+| Setting | Meaning |
+| --- | --- |
+| `SRC` / `DST` | Server to copy from / to |
+| `SRC_USER` / `DST_USER` | Your username on each server |
+| `SRC_PASSWORD` / `DST_PASSWORD` | Optional; if empty you are asked when needed |
+| `GROUP` | Group that owns the data, on both servers |
+| `SRC_GROUP` / `DST_GROUP` | Only if the group name differs between servers |
+| `OBJ` | What to copy, for example `Dataset:1` |
+| `ARCHIVE` | Where to write the archive; `.zip` compresses, `.tar` makes a tarball, a name with no extension writes a folder |
+| `MERGE` | `true` adds to an existing project or dataset of the same name |
+| `PORT` | Only if the server does not use the standard 4064 |
+
+Settings given on the command line override the file.
+
+### Scripts
 
 | Script | What it does |
 | --- | --- |
-| `scripts/check.sh` | Checks uv and `omero transfer`, the config, port reachability on both servers and disk space |
-| `scripts/pack.sh` | Logs in to `SRC`, runs `omero transfer pack "$OBJ" "$ARCHIVE"`, logs out |
-| `scripts/unpack.sh` | Logs in to `DST`, runs `omero transfer unpack [--merge] "$ARCHIVE"`, logs out |
-| `scripts/transfer.sh` | All of the above in sequence, then offers to delete the archive |
+| `scripts/check.sh` | Checks the settings, both servers and disk space. Changes nothing |
+| `scripts/pack.sh` | Downloads the data from the source into the archive |
+| `scripts/unpack.sh` | Uploads the archive to the target |
+| `scripts/transfer.sh` | All three in order, then offers to delete the archive |
 
-All scripts accept `-c CONFIG` and `-h`; `unpack.sh` and `transfer.sh` also accept `--merge`.
-Running pack and unpack separately is useful when the two servers are reachable from different
-networks: pack on one machine, copy the archive, unpack on another.
+Every script accepts `-c FILE` to use a different settings file and `-h` for help.
+`unpack.sh` and `transfer.sh` also accept `--merge`.
 
-To run the CLI by hand, prefix commands with `uv run`:
+### Running the OMERO CLI by hand
+
+The full `omero` command line is available through `uv run`:
 
 ```bash
-uv run omero login -u "$SRC_USER" -s "$SRC" -g "$GROUP"
+uv run omero login -u gokhozsa -s omero-staging.c3se.chalmers.se -g omero_test_20
 uv run omero transfer pack Dataset:1 ~/omero-transfers/dataset1.zip
 uv run omero logout
 ```
 
-## Examples
+## For maintainers
 
-```bash
-OBJ=Image:19          # single image
-OBJ=Dataset:1         # dataset with its images, annotations and ROIs
-OBJ=Project:1         # project with all its datasets
-OBJ=Image:19-25       # range
-OBJ=Dataset:1,4,7     # list
-```
-
-The worked example in `configs/staging-to-prod.env.example` moves `Dataset:1` from
-`omero-staging.c3se.chalmers.se` to `omero.scilifelab.se` in group `omero_test_20`. Connect to the
-Chalmers VPN first. The dataset arrives on production as a new orphaned Dataset with the same
-name, images, annotations and ROIs; use `--merge` if a Dataset with that name already exists there.
-
-## Verify and clean up
-
-1. Open the target in OMERO.web and confirm the Project/Dataset tree, image count and thumbnails.
-2. Spot-check tags, key-value pairs, file attachments, ratings and ROIs on a few images.
-3. Delete the local archive once the data is confirmed.
-
-Only MapAnnotations, Tags, FileAnnotations, ratings and CommentAnnotations are transferred. All ROI
-types except Masks are supported. Rendering settings are not included.
-
-## Other platforms
+### Other platforms
 
 `omero-py` needs `zeroc-ice` 3.6.5, which does not build reliably from source, so
-`pyproject.toml` pins prebuilt Glencoe Software wheels for Python 3.12 under `[tool.uv.sources]`.
-For another platform or a newer build, add or change the URL there from the
+[pyproject.toml](pyproject.toml) pins prebuilt Glencoe Software wheels for Python 3.12 under
+`[tool.uv.sources]`. For another platform or a newer build, add or change the URL there using the
 [macOS releases](https://github.com/glencoesoftware/zeroc-ice-py-macos-universal2/releases) or
 [Linux releases](https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases), keeping
 the `cp312` tag in line with `requires-python`, then run `uv lock`.
 
-## Troubleshooting
-
-- **`uv sync` tries to build `zeroc-ice` from source.** Your platform has no wheel entry in
-  `pyproject.toml`; see [Other platforms](#other-platforms).
-- **`'transfer' is not a recognized command`.** Run `uv sync` in this repo, and call the CLI through
-  the scripts or `uv run omero`.
-- **Connection refused or timeout on login.** Check the hostname, that the VPN is connected if the
-  instance needs one, and that port 4064 is reachable: `scripts/check.sh`.
-- **`SecurityViolation` or group errors on unpack.** The user is not a member of the group on the
-  target, or the group name differs between servers (set `SRC_GROUP` / `DST_GROUP`).
-- **Plate or Screen download errors.** OMERO blocks binary downloads of plates by default. The
-  server needs `omero.policy.binary_access` relaxed before such a pack can succeed.
-- **A retried unpack creates duplicates or fails on `clientPath`.** Images left behind by a failed
-  unpack are not annotated, so the retry collides with them. Delete the partial import on the
-  target first.
-
-## Development
+### Checking the scripts
 
 ```bash
 uv run --group dev shellcheck scripts/*.sh

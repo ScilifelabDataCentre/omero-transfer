@@ -24,7 +24,7 @@ check_port() {
     if nc -z -w 5 "$1" "$PORT" >/dev/null 2>&1; then
         info "$1:$PORT is reachable"
     else
-        warn "$1:$PORT is not reachable. Check the hostname and whether the instance needs a VPN."
+        warn "$1:$PORT is not reachable. Check the hostname and that the server is reachable from your network."
         return 1
     fi
 }
