@@ -21,6 +21,7 @@ EOF
 parse_args "$@"
 export CONFIG MERGE
 
+# CONFIG and MERGE are exported above; sub-scripts pick them up from the environment.
 "$SCRIPTS_DIR/check.sh"
 "$SCRIPTS_DIR/pack.sh"
 "$SCRIPTS_DIR/unpack.sh"

@@ -100,7 +100,10 @@ print_config() {
     info "Config: $CONFIG"
     printf '    %-10s %s (group %s)\n' "source" "$SRC" "$SRC_GROUP"
     printf '    %-10s %s (group %s)\n' "target" "$DST" "$DST_GROUP"
-    printf '    %-10s %s\n' "user" "$OMERO_USER" "object" "$OBJ" "archive" "$ARCHIVE" "merge" "$MERGE"
+    printf '    %-10s %s\n' "user" "$OMERO_USER"
+    printf '    %-10s %s\n' "object" "$OBJ"
+    printf '    %-10s %s\n' "archive" "$ARCHIVE"
+    printf '    %-10s %s\n' "merge" "$MERGE"
 }
 
 require_uv() {
@@ -111,10 +114,10 @@ require_uv() {
 logout_quietly() {
     omero logout >/dev/null 2>&1 || true
 }
+trap logout_quietly EXIT
 
-# Usage: omero_login HOST GROUP   (prompts for the password; logs out again on exit)
+# Usage: omero_login HOST GROUP   (prompts for the password)
 omero_login() {
     info "Logging in to $1 as $OMERO_USER (group $2)"
-    trap logout_quietly EXIT
     omero login -u "$OMERO_USER" -s "$1" -p "$PORT" -g "$2"
 }
