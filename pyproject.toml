@@ -1,0 +1,26 @@
+[project]
+name = "omero-transfer"
+version = "0.1.0"
+description = "Scripts and instructions to transfer data between OMERO instances"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "omero-cli-transfer>=1.3.2,<1.4.0",
+    "omero-py>=5.23.0,<5.24.0",
+    "zeroc-ice>=3.6.5,<3.7.0",
+]
+
+[tool.uv.sources]
+
+zeroc-ice = [
+  { url = "https://github.com/glencoesoftware/zeroc-ice-py-macos-universal2/releases/download/20261011/zeroc_ice-3.6.5-cp312-cp312-macosx_11_0_universal2.whl", marker = "sys_platform == 'darwin'" },
+  { url = "https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20261109/zeroc_ice-3.6.5-cp312-cp312-manylinux_2_28_x86_64.whl", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" },
+]
+[dependency-groups]
+dev = [
+    "shellcheck-py>=0.11.0.1",
+]
+
+[tool.uv]
+package = false
+default-groups = []
