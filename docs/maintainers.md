@@ -19,3 +19,18 @@ scripts/check.sh                             # runtime check
 Run both. Shellcheck does not flag a call to a function that no longer exists, and an unbound
 variable only surfaces when the line is reached, so `scripts/check.sh` is what catches a helper
 left behind by a refactor.
+
+## Cutting a release
+
+Bump `version` in [pyproject.toml](../pyproject.toml), commit it, then tag and push:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+[The release workflow](../.github/workflows/release.yml) checks the tag against
+`pyproject.toml`, runs shellcheck, and publishes a release with auto-generated notes. The tag
+must match the version exactly or the workflow fails, so bump the version first.
+
+Only tags of the form `vMAJOR.MINOR.PATCH` trigger it.
