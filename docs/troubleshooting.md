@@ -13,7 +13,8 @@ not belong to it. Ask a server administrator to add you, or use a group you are 
 
 **Your login is rejected and you use single sign-on.** The session token has expired or was
 copied incompletely, and it fails the same way a wrong password would. Get a fresh one from
-OMERO.web, as described in [Single sign-on](authentication.md#single-sign-on).
+OMERO.web, as described in [Single sign-on](authentication.md#single-sign-on). The script then
+asks for a username and a password; paste the fresh token into both prompts.
 
 **You see `'transfer' is not a recognized command`.** The tools are not installed. Run `uv sync`
 in the repo folder, and start the scripts from there.

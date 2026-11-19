@@ -10,6 +10,11 @@ when they need it, which is the safest option. If you put passwords in the setti
 means: the file stores them as ordinary readable text, and while the transfer runs, anyone else
 with an account on the same machine can see them in the list of running processes.
 
+If a server refuses the login, the script asks again for **both** the username and the password,
+up to three attempts. A refused login is as often a wrong username as a wrong password, so both
+are offered. Nothing you type at the prompt is written back to the settings file; correct the
+file yourself to stop it being asked again on the next run.
+
 ## Single sign-on
 
 If you sign in to OMERO.web through your institution (single sign-on), you probably have no
