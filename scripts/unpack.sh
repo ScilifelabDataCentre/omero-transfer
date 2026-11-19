@@ -10,6 +10,7 @@ Usage: scripts/unpack.sh [-c CONFIG] [--merge]
 
 Logs in to \$DST, unpacks \$ARCHIVE and logs out again.
 The password is prompted for unless \$DST_PASSWORD is set in the config.
+Set \$DST_SESSION_KEY instead to join an existing single sign-on session.
 
   -c, --config FILE   config file (default: transfer.env)
   --merge             add into an existing Project/Dataset with the same name
@@ -24,9 +25,7 @@ print_config
 
 [[ -e "$ARCHIVE" ]] || die "archive not found: $ARCHIVE (run scripts/pack.sh first)"
 
-omero_login "$DST" "$DST_GROUP" "$DST_USER" "$DST_PASSWORD"
 info "Unpacking $ARCHIVE into $DST${MERGE_FLAG[0]:+ (merge)}"
-omero transfer unpack ${MERGE_FLAG[@]+"${MERGE_FLAG[@]}"} "$ARCHIVE"
-logout_quietly
+transfer_on dst unpack ${MERGE_FLAG[@]+"${MERGE_FLAG[@]}"} "$ARCHIVE"
 
 info "Unpack finished. Verify the data in OMERO.web on $DST before deleting $ARCHIVE."

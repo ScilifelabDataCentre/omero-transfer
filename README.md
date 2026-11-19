@@ -141,6 +141,35 @@ when they need it, which is the safest option. If you put passwords in the setti
 means: the file stores them as ordinary readable text, and while the transfer runs, anyone else
 with an account on the same machine can see them in the list of running processes.
 
+## Single sign-on
+
+If you sign in to OMERO.web through your institution (single sign-on), you probably have no
+password that works outside the browser. Instead, OMERO.web can give you a **session token**: a
+code that stands in for your login. After signing in, follow the "obtain a session token here"
+link.
+
+![Obtaining a session token in OMERO.web](assets/ss-SSO-token.png)
+
+Paste the token into your settings file in place of the username and password for that server:
+
+```bash
+SRC_SESSION_KEY=4d8e1f2a-...
+DST_SESSION_KEY=9b3c7e05-...
+```
+
+The two servers are independent, so you can use a token on one side and an ordinary username and
+password on the other.
+
+A few things worth knowing:
+
+- **Your group still applies.** OMERO ignores the group when a token is used, so the scripts
+  switch the token's session to your `GROUP` before transferring. Leave `GROUP` empty to keep
+  whichever group the token already has.
+- **This also changes the group in your browser.** The switch happens on the server, on the same
+  session your browser is using, so OMERO.web may follow along.
+- **Tokens expire.** A stale one fails with `Bad session key`; get a fresh one from the same link.
+- **The scripts do not log out in this mode,** so your browser session stays alive.
+
 ## Common tasks
 
 **Add to a dataset that already exists on the target.** By default a second dataset with the same
@@ -191,6 +220,9 @@ servers is unreachable.
 of that group on the target server, or the group has a different name there. If the names differ,
 add `SRC_GROUP` and `DST_GROUP` to your settings file instead of `GROUP`.
 
+**You see `Bad session key`.** The session token has expired or was copied incompletely. Get a
+fresh one from OMERO.web, as described in [Single sign-on](#single-sign-on).
+
 **You see `'transfer' is not a recognized command`.** The tools are not installed. Run `uv sync`
 in the repo folder, and start the scripts from there.
 
@@ -213,6 +245,7 @@ OMERO.web first, then unpack again.
 | `SRC` / `DST` | Server to copy from / to |
 | `SRC_USER` / `DST_USER` | Your username on each server |
 | `SRC_PASSWORD` / `DST_PASSWORD` | Optional; if empty you are asked when needed |
+| `SRC_SESSION_KEY` / `DST_SESSION_KEY` | Optional; an OMERO.web session token, used instead of the username and password. See [Single sign-on](#single-sign-on) |
 | `GROUP` | Group that owns the data, on both servers |
 | `SRC_GROUP` / `DST_GROUP` | Only if the group name differs between servers |
 | `OBJ` | What to copy, for example `Dataset:1` |
