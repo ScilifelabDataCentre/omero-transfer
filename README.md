@@ -35,7 +35,7 @@ Check all of these before your first transfer.
   `Dataset:1`.
 
 This works on macOS and on Linux x86_64. For anything else, see
-[Other platforms](#other-platforms).
+[Other platforms](docs/maintainers.md#other-platforms).
 
 ## Step by step
 
@@ -76,12 +76,13 @@ ARCHIVE=~/omero-transfers/dataset1.zip   # where to put the archive on your comp
 MERGE=false
 ```
 
-Two notes on this file:
+Three notes on this file:
 
-- Leave the two password lines empty. See [Passwords](#passwords) for why.
+- Leave the two password lines empty. See [Passwords](docs/authentication.md#passwords) for why.
 - `transfer.env` is never committed to git, so your details stay on your machine.
 - If a later unpack finishes without copying any images, the target server needs `ssl://` in
-  front of its name. See [Nothing was imported](#nothing-was-imported).
+  front of its name. See
+  [Nothing was imported](docs/troubleshooting.md#nothing-was-imported).
 
 ### Step 3: Check that everything is ready
 
@@ -96,7 +97,7 @@ It changes nothing. The last line should read:
 ==> All checks passed
 ```
 
-If it does not, read the warning it printed and see [Troubleshooting](#troubleshooting).
+If it does not, read the warning it printed and see [Troubleshooting](docs/troubleshooting.md).
 
 ### Step 4: Run the transfer
 
@@ -105,8 +106,9 @@ scripts/transfer.sh
 ```
 
 Unless you filled in the password fields, you will be asked for your password twice, once per
-server, and nothing is shown as you type. See [Passwords](#passwords). The script then packs the
-data, uploads it, and prints a summary.
+server, and nothing is shown as you type. See
+[Passwords](docs/authentication.md#passwords). The script then packs the data, uploads it, and
+prints a summary.
 
 Packing downloads every original file, so a large project can take a long time. Leave the terminal
 window open until it finishes.
@@ -118,6 +120,9 @@ target server in OMERO.web and confirm:
 
 1. The project or dataset is there, with the right number of images and visible thumbnails.
 2. A few images still have their tags, key-value pairs, attachments, ratings and ROIs.
+
+Not everything comes across; see
+[What is and is not copied](docs/reference.md#what-is-and-is-not-copied) for the full list.
 
 Once you are satisfied, answer `y` to delete the archive from your computer. If anything looks
 wrong, answer `n`: the archive is kept so you can unpack it again without repeating the download.
@@ -135,43 +140,7 @@ OBJ=Dataset:1,4,7     # datasets 1, 4 and 7
 ```
 
 `Plate` and `Screen` also work, but most servers block them until an administrator changes a
-setting. See [Troubleshooting](#troubleshooting).
-
-## Passwords
-
-`SRC_PASSWORD` and `DST_PASSWORD` are optional. If empty, the scripts will then ask you for each password
-when they need it, which is the safest option. If you put passwords in the settings file, be aware of what that
-means: the file stores them as ordinary readable text, and while the transfer runs, anyone else
-with an account on the same machine can see them in the list of running processes.
-
-## Single sign-on
-
-If you sign in to OMERO.web through your institution (single sign-on), you probably have no
-password that works outside the browser. Instead, OMERO.web can give you a **session token**: a
-code that stands in for your login. After signing in, follow the "obtain a session token here"
-link.
-
-![Obtaining a session token in OMERO.web](assets/ss-SSO-token.png)
-
-A token is used as both the username and the password for that server. Put the same value in
-both fields:
-
-```bash
-DST_USER=9b3c7e05-...
-DST_PASSWORD=9b3c7e05-...
-```
-
-The two servers are independent, so you can use a token on one side and an ordinary username and
-password on the other.
-
-A few things worth knowing:
-
-- **Your group still applies.** `SRC_GROUP` and `DST_GROUP` work exactly as they do for an
-  ordinary login; a token changes nothing about them.
-- **Tokens expire.** A stale one is rejected like a wrong password; get a fresh one from the
-  same link.
-- **The token is not printed.** The scripts show `(session token)` instead, so it does not end up
-  in your terminal history or in a log you paste to someone.
+setting. See [Troubleshooting](docs/troubleshooting.md).
 
 ## Common tasks
 
@@ -205,111 +174,9 @@ scripts/pack.sh        # on the machine that can reach the source
 scripts/unpack.sh      # on the machine that can reach the target
 ```
 
-## What is and is not copied
+## More detail
 
-**Copied:** images and their original files, the project and dataset structure, tags, key-value
-pairs, file attachments, ratings, comments, and ROIs.
-
-**Not copied:** Mask ROIs, rendering settings (brightness, contrast and channel colours), and any
-annotation type not listed above.
-
-## Troubleshooting
-
-**The check or a login fails with a connection error.** The server name may be wrong, or the
-server may not be reachable from your network. Run `scripts/check.sh` to see which of the two
-servers is unreachable.
-
-**You see `SecurityViolation`, or an error about the group, when unpacking.** You are not a member
-of `DST_GROUP` on the target server, or the group is named differently there. The two groups are
-set independently, so `SRC_GROUP` and `DST_GROUP` do not have to match.
-
-**The data arrives in the wrong group.** OMERO falls back to your default group without
-complaining when you ask for one you are not a member of. Check `DST_GROUP` against the group
-list in OMERO.web on the target server.
-
-**Your login is rejected and you use single sign-on.** The session token has expired or was
-copied incompletely, and it fails the same way a wrong password would. Get a fresh one from
-OMERO.web, as described in [Single sign-on](#single-sign-on).
-
-**You see `'transfer' is not a recognized command`.** The tools are not installed. Run `uv sync`
-in the repo folder, and start the scripts from there.
-
-**`uv sync` starts compiling `zeroc-ice` and fails.** There is no prepared package for your
-computer. See [Other platforms](#other-platforms).
-
-**Packing a Plate or Screen fails to download.** OMERO blocks these downloads by default. A server
-administrator has to relax the `omero.policy.binary_access` setting before this can work.
-
-<a id="nothing-was-imported"></a>
-**Unpacking finishes but no images arrive.** Look in the output for `Insecure connection
-requested, falling back`, then `Obtained null object proxy`, and finally `Image corresponding to
-Image:1 not found. Skipping.` The image importer first connects to the server encrypted, then
-tries to switch to an unencrypted connection for the upload, and that second connection is
-blocked on many servers. Keep it encrypted by putting `ssl://` in front of that server name:
-
-```bash
-DST=ssl://omero.scilifelab.se
-```
-
-Then unpack again. The archive from the earlier attempt can be reused; there is no need to pack a
-second time. Delete any empty projects or datasets the failed attempt left behind first.
-
-**A second attempt at unpacking creates duplicates, or fails with a `clientPath` error.** A
-previous failed attempt left images behind on the target. Delete those partial imports in
-OMERO.web first, then unpack again.
-
-## Reference
-
-### Settings
-
-| Setting | Meaning |
-| --- | --- |
-| `SRC` / `DST` | Server to copy from / to. May carry an `ssl://` prefix, see [Nothing was imported](#nothing-was-imported) |
-| `SRC_USER` / `DST_USER` | Your username on each server |
-| `SRC_PASSWORD` / `DST_PASSWORD` | Optional; if empty you are asked when needed |
-| `SRC_GROUP` / `DST_GROUP` | Group on each server. Both required, and they may be named differently |
-| `OBJ` | What to copy, for example `Dataset:1` |
-| `ARCHIVE` | Where to write the archive; `.zip` compresses, `.tar` makes a tarball, a name with no extension writes a folder |
-| `MERGE` | `true` adds to an existing project or dataset of the same name |
-| `PORT` | Only if the server does not use the standard 4064. Ignored for an `ssl://` host, which carries its own port |
-
-Settings given on the command line override the file.
-
-### Scripts
-
-| Script | What it does |
-| --- | --- |
-| `scripts/check.sh` | Checks the settings, both servers and disk space. Changes nothing |
-| `scripts/pack.sh` | Downloads the data from the source into the archive |
-| `scripts/unpack.sh` | Uploads the archive to the target |
-| `scripts/transfer.sh` | All three in order, then offers to delete the archive |
-
-Every script accepts `-c FILE` to use a different settings file and `-h` for help.
-`unpack.sh` and `transfer.sh` also accept `--merge`.
-
-### Running the OMERO CLI by hand
-
-The full `omero` command line is available through `uv run`:
-
-```bash
-uv run omero login -u gokhozsa -s omero-staging.c3se.chalmers.se -g omero_test_20
-uv run omero transfer pack Dataset:1 ~/omero-transfers/dataset1.zip
-uv run omero logout
-```
-
-## For maintainers
-
-### Other platforms
-
-`omero-py` needs `zeroc-ice` 3.6.5, which does not build reliably from source, so
-[pyproject.toml](pyproject.toml) pins prebuilt Glencoe Software wheels for Python 3.12 under
-`[tool.uv.sources]`. For another platform or a newer build, add or change the URL there using the
-[macOS releases](https://github.com/glencoesoftware/zeroc-ice-py-macos-universal2/releases) or
-[Linux releases](https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases), keeping
-the `cp312` tag in line with `requires-python`, then run `uv lock`.
-
-### Checking the scripts
-
-```bash
-uv run --group dev shellcheck scripts/*.sh
-```
+- [Passwords and single sign-on](docs/authentication.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Reference](docs/reference.md): every setting, every script, and what is copied
+- [For maintainers](docs/maintainers.md)
