@@ -67,9 +67,10 @@ SRC=omero-staging.c3se.chalmers.se       # server you copy FROM
 DST=omero.scilifelab.se                  # server you copy TO
 SRC_USER=gokhozsa                        # your username on the source server
 SRC_PASSWORD=                            # optional; if empty, omero login prompts interactively
+SRC_GROUP=omero_test_20                  # group that owns the data on the source server
 DST_USER=gokhozsa                        # your username on the target server
 DST_PASSWORD=                            # optional; if empty, omero login prompts interactively
-GROUP=omero_test_20                      # group that owns the data
+DST_GROUP=omero_test_20                  # group to copy into on the target server
 OBJ=Dataset:1                            # what to copy
 ARCHIVE=~/omero-transfers/dataset1.zip   # where to put the archive on your computer
 MERGE=false
@@ -79,6 +80,8 @@ Two notes on this file:
 
 - Leave the two password lines empty. See [Passwords](#passwords) for why.
 - `transfer.env` is never committed to git, so your details stay on your machine.
+- If a later unpack finishes without copying any images, the target server needs `ssl://` in
+  front of its name. See [Nothing was imported](#nothing-was-imported).
 
 ### Step 3: Check that everything is ready
 
@@ -150,11 +153,12 @@ link.
 
 ![Obtaining a session token in OMERO.web](assets/ss-SSO-token.png)
 
-Paste the token into your settings file in place of the username and password for that server:
+A token is used as both the username and the password for that server. Put the same value in
+both fields:
 
 ```bash
-SRC_SESSION_KEY=4d8e1f2a-...
-DST_SESSION_KEY=9b3c7e05-...
+DST_USER=9b3c7e05-...
+DST_PASSWORD=9b3c7e05-...
 ```
 
 The two servers are independent, so you can use a token on one side and an ordinary username and
@@ -162,13 +166,12 @@ password on the other.
 
 A few things worth knowing:
 
-- **Your group still applies.** OMERO ignores the group when a token is used, so the scripts
-  switch the token's session to your `GROUP` before transferring. Leave `GROUP` empty to keep
-  whichever group the token already has.
-- **This also changes the group in your browser.** The switch happens on the server, on the same
-  session your browser is using, so OMERO.web may follow along.
-- **Tokens expire.** A stale one fails with `Bad session key`; get a fresh one from the same link.
-- **The scripts do not log out in this mode,** so your browser session stays alive.
+- **Your group still applies.** `SRC_GROUP` and `DST_GROUP` work exactly as they do for an
+  ordinary login; a token changes nothing about them.
+- **Tokens expire.** A stale one is rejected like a wrong password; get a fresh one from the
+  same link.
+- **The token is not printed.** The scripts show `(session token)` instead, so it does not end up
+  in your terminal history or in a log you paste to someone.
 
 ## Common tasks
 
@@ -217,11 +220,16 @@ server may not be reachable from your network. Run `scripts/check.sh` to see whi
 servers is unreachable.
 
 **You see `SecurityViolation`, or an error about the group, when unpacking.** You are not a member
-of that group on the target server, or the group has a different name there. If the names differ,
-add `SRC_GROUP` and `DST_GROUP` to your settings file instead of `GROUP`.
+of `DST_GROUP` on the target server, or the group is named differently there. The two groups are
+set independently, so `SRC_GROUP` and `DST_GROUP` do not have to match.
 
-**You see `Bad session key`.** The session token has expired or was copied incompletely. Get a
-fresh one from OMERO.web, as described in [Single sign-on](#single-sign-on).
+**The data arrives in the wrong group.** OMERO falls back to your default group without
+complaining when you ask for one you are not a member of. Check `DST_GROUP` against the group
+list in OMERO.web on the target server.
+
+**Your login is rejected and you use single sign-on.** The session token has expired or was
+copied incompletely, and it fails the same way a wrong password would. Get a fresh one from
+OMERO.web, as described in [Single sign-on](#single-sign-on).
 
 **You see `'transfer' is not a recognized command`.** The tools are not installed. Run `uv sync`
 in the repo folder, and start the scripts from there.
@@ -231,6 +239,20 @@ computer. See [Other platforms](#other-platforms).
 
 **Packing a Plate or Screen fails to download.** OMERO blocks these downloads by default. A server
 administrator has to relax the `omero.policy.binary_access` setting before this can work.
+
+<a id="nothing-was-imported"></a>
+**Unpacking finishes but no images arrive.** Look in the output for `Insecure connection
+requested, falling back`, then `Obtained null object proxy`, and finally `Image corresponding to
+Image:1 not found. Skipping.` The image importer first connects to the server encrypted, then
+tries to switch to an unencrypted connection for the upload, and that second connection is
+blocked on many servers. Keep it encrypted by putting `ssl://` in front of that server name:
+
+```bash
+DST=ssl://omero.scilifelab.se
+```
+
+Then unpack again. The archive from the earlier attempt can be reused; there is no need to pack a
+second time. Delete any empty projects or datasets the failed attempt left behind first.
 
 **A second attempt at unpacking creates duplicates, or fails with a `clientPath` error.** A
 previous failed attempt left images behind on the target. Delete those partial imports in
@@ -242,16 +264,14 @@ OMERO.web first, then unpack again.
 
 | Setting | Meaning |
 | --- | --- |
-| `SRC` / `DST` | Server to copy from / to |
+| `SRC` / `DST` | Server to copy from / to. May carry an `ssl://` prefix, see [Nothing was imported](#nothing-was-imported) |
 | `SRC_USER` / `DST_USER` | Your username on each server |
 | `SRC_PASSWORD` / `DST_PASSWORD` | Optional; if empty you are asked when needed |
-| `SRC_SESSION_KEY` / `DST_SESSION_KEY` | Optional; an OMERO.web session token, used instead of the username and password. See [Single sign-on](#single-sign-on) |
-| `GROUP` | Group that owns the data, on both servers |
-| `SRC_GROUP` / `DST_GROUP` | Only if the group name differs between servers |
+| `SRC_GROUP` / `DST_GROUP` | Group on each server. Both required, and they may be named differently |
 | `OBJ` | What to copy, for example `Dataset:1` |
 | `ARCHIVE` | Where to write the archive; `.zip` compresses, `.tar` makes a tarball, a name with no extension writes a folder |
 | `MERGE` | `true` adds to an existing project or dataset of the same name |
-| `PORT` | Only if the server does not use the standard 4064 |
+| `PORT` | Only if the server does not use the standard 4064. Ignored for an `ssl://` host, which carries its own port |
 
 Settings given on the command line override the file.
 

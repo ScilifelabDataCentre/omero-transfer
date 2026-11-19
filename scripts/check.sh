@@ -9,22 +9,26 @@ usage() {
 Usage: scripts/check.sh [-c CONFIG]
 
 Checks that uv and omero-cli-transfer work, that the config is filled in,
-that port \$PORT (default 4064) is reachable on both servers and that there is
-disk space for the archive.
+that both servers are reachable on their OMERO port (\$PORT, default 4064, or
+the port implied by an ssl:// style host) and that there is disk space for
+the archive.
 
   -c, --config FILE   config file (default: transfer.env)
 EOF
 }
 
 check_port() {
+    local host port
+    host="$(host_only "$1")"
+    port="$(host_port "$1")"
     if ! command -v nc >/dev/null 2>&1; then
-        warn "nc not found, skipping reachability check for $1"
+        warn "nc not found, skipping reachability check for $host"
         return 0
     fi
-    if nc -z -w 5 "$1" "$PORT" >/dev/null 2>&1; then
-        info "$1:$PORT is reachable"
+    if nc -z -w 5 "$host" "$port" >/dev/null 2>&1; then
+        info "$host:$port is reachable"
     else
-        warn "$1:$PORT is not reachable. Check the hostname and that the server is reachable from your network."
+        warn "$host:$port is not reachable. Check the hostname and that the server is reachable from your network."
         return 1
     fi
 }
@@ -52,7 +56,7 @@ if [[ -e "$ARCHIVE" ]]; then
     warn "$ARCHIVE already exists and will be overwritten by pack"
 fi
 if [[ "$OBJ" == Plate:* || "$OBJ" == Screen:* ]]; then
-    warn "Plates and Screens need omero.policy.binary_access relaxed on $SRC, or pack will fail"
+    warn "Plates and Screens need omero.policy.binary_access relaxed on $(host_only "$SRC"), or pack will fail"
 fi
 
 [[ $failed -eq 0 ]] || die "preflight checks failed"

@@ -10,9 +10,10 @@ usage() {
 Usage: scripts/transfer.sh [-c CONFIG] [--merge]
 
 Runs check.sh, pack.sh and unpack.sh in sequence, then offers to delete the
-local archive. Each login prompts for the password unless SRC_PASSWORD or
-DST_PASSWORD is set in the config. Set SRC_SESSION_KEY / DST_SESSION_KEY
-instead to join existing single sign-on sessions.
+local archive. Each side logs in with its own user and group. Each login
+prompts for the password unless SRC_PASSWORD or DST_PASSWORD is set in the
+config. With single sign-on, put your session token in both the username and
+the password for that side.
 
   -c, --config FILE   config file (default: transfer.env)
   --merge             add into an existing Project/Dataset with the same name
@@ -31,7 +32,7 @@ export CONFIG MERGE
 load_config
 cat <<EOF
 
-Verify the transfer in OMERO.web on $DST:
+Verify the transfer in OMERO.web on $(host_only "$DST"):
   1. Project/Dataset tree, image count and thumbnails match the source.
   2. Spot-check tags, key-value pairs, file attachments, ratings and ROIs on a few images.
 

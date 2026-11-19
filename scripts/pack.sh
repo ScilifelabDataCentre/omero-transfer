@@ -8,9 +8,10 @@ usage() {
     cat <<EOF
 Usage: scripts/pack.sh [-c CONFIG]
 
-Logs in to \$SRC, packs \$OBJ into \$ARCHIVE and logs out again.
-The password is prompted for unless \$SRC_PASSWORD is set in the config.
-Set \$SRC_SESSION_KEY instead to join an existing single sign-on session.
+Logs in to \$SRC as \$SRC_USER in \$SRC_GROUP, packs \$OBJ into \$ARCHIVE and
+logs out again. The password is prompted for unless \$SRC_PASSWORD is set in
+the config. With single sign-on, put your session token in both \$SRC_USER
+and \$SRC_PASSWORD.
 
   -c, --config FILE   config file (default: transfer.env)
 EOF
