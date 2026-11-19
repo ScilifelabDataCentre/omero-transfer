@@ -1,1 +1,17 @@
 extras/
+
+# Python / uv
+.venv/
+__pycache__/
+
+# Transfer configs (may contain usernames/hostnames); templates stay tracked
+transfer.env
+configs/*.env
+!configs/*.env.example
+
+# Transfer archives
+*.zip
+*.tar
+transfers/
+
+.DS_Store
