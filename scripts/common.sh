@@ -182,6 +182,38 @@ omero_login() {
         omero login -u "$user" "${CONN_FLAGS[@]}" -g "$group"
     fi
     LOGGED_IN=true
+    select_group "$host" "$group"
+}
+
+# OMERO does not guarantee the group asked for at login: it falls back to the
+# user's default group when -g cannot be honoured, and ignores -g altogether
+# for a session key. Set the group explicitly, then read it back, so nothing is
+# ever packed from or written into the wrong workspace.
+select_group() {
+    local host="$1" group="$2"
+    local where out id actual status=0
+    where="$(host_only "$host")"
+
+    out="$(omero sessions group "$group" 2>&1)" || status=$?
+    if [[ $status -ne 0 ]]; then
+        case "$out" in
+            *ApiUsageException*) die "group '$group' does not exist on $where" ;;
+            *SecurityViolation*) die "group '$group' exists on $where but you are not a member of it" ;;
+            *) die "could not switch to group '$group' on $where:"$'\n'"$out" ;;
+        esac
+    fi
+    [[ "$out" != *"switched to"* ]] || info "Session group set to $group"
+
+    id="$(omero sessions group)" || die "could not read the active group on $where"
+    id="${id#ExperimenterGroup:}"
+    if [[ "$group" =~ ^[0-9]+$ ]]; then
+        actual="$id"
+    else
+        actual="$(omero obj get "ExperimenterGroup:$id" name)" ||
+            die "could not read the name of group $id on $where"
+    fi
+    [[ "$actual" == "$group" ]] ||
+        die "asked for group '$group' on $where but the session is in '$actual'"
 }
 
 # Usage: transfer_on src|dst ARGS...

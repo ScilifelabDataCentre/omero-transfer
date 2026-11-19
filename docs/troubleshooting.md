@@ -4,13 +4,12 @@
 server may not be reachable from your network. Run `scripts/check.sh` to see which of the two
 servers is unreachable.
 
-**You see `SecurityViolation`, or an error about the group, when unpacking.** You are not a member
-of `DST_GROUP` on the target server, or the group is named differently there. The two groups are
-set independently, so `SRC_GROUP` and `DST_GROUP` do not have to match.
+**You see `group '...' does not exist`.** The group is misspelled, or it is named differently on
+that server. `SRC_GROUP` and `DST_GROUP` are set independently and do not have to match. Check
+both against the group list in OMERO.web.
 
-**The data arrives in the wrong group.** OMERO falls back to your default group without
-complaining when you ask for one you are not a member of. Check `DST_GROUP` against the group
-list in OMERO.web on the target server.
+**You see `you are not a member of it`.** The group exists on that server but your account does
+not belong to it. Ask a server administrator to add you, or use a group you are already in.
 
 **Your login is rejected and you use single sign-on.** The session token has expired or was
 copied incompletely, and it fails the same way a wrong password would. Get a fresh one from

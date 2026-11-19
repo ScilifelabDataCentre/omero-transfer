@@ -7,7 +7,7 @@
 | `SRC` / `DST` | Server to copy from / to. May carry an `ssl://` prefix, see [Nothing was imported](troubleshooting.md#nothing-was-imported) |
 | `SRC_USER` / `DST_USER` | Your username on each server |
 | `SRC_PASSWORD` / `DST_PASSWORD` | Optional; if empty you are asked when needed |
-| `SRC_GROUP` / `DST_GROUP` | Group on each server. Both required, and they may be named differently |
+| `SRC_GROUP` / `DST_GROUP` | Group on each server, by name or numeric id. Both required, and they may be named differently |
 | `OBJ` | What to copy, for example `Dataset:1` |
 | `ARCHIVE` | Where to write the archive; `.zip` compresses, `.tar` makes a tarball, a name with no extension writes a folder |
 | `MERGE` | `true` adds to an existing project or dataset of the same name |
