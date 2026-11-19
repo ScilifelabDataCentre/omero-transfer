@@ -12,5 +12,10 @@ the `cp312` tag in line with `requires-python`, then run `uv lock`.
 ## Checking the scripts
 
 ```bash
-uv run --group dev shellcheck scripts/*.sh
+uv run --group dev shellcheck scripts/*.sh   # static check
+scripts/check.sh                             # runtime check
 ```
+
+Run both. Shellcheck does not flag a call to a function that no longer exists, and an unbound
+variable only surfaces when the line is reached, so `scripts/check.sh` is what catches a helper
+left behind by a refactor.

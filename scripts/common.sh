@@ -126,8 +126,6 @@ validate_config() {
             errors=1
         fi
     done
-    validate_side SRC "$SRC_SESSION_KEY" "$SRC_USER" "$SRC_PASSWORD" "$SRC_GROUP" || errors=1
-    validate_side DST "$DST_SESSION_KEY" "$DST_USER" "$DST_PASSWORD" "$DST_GROUP" || errors=1
     if [[ -n "${OBJ:-}" && ! "$OBJ" =~ ^(Image|Dataset|Project|Plate|Screen):[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$ ]]; then
         warn "OBJ must look like Image:19, Dataset:1,4,7 or Image:19-25 (got '$OBJ')"
         errors=1
