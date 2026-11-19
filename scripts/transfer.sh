@@ -10,7 +10,8 @@ usage() {
 Usage: scripts/transfer.sh [-c CONFIG] [--merge]
 
 Runs check.sh, pack.sh and unpack.sh in sequence, then offers to delete the
-local archive. Each login prompts for the password.
+local archive. Each login prompts for the password unless SRC_PASSWORD or
+DST_PASSWORD is set in the config.
 
   -c, --config FILE   config file (default: transfer.env)
   --merge             add into an existing Project/Dataset with the same name

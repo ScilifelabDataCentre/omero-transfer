@@ -9,6 +9,7 @@ usage() {
 Usage: scripts/unpack.sh [-c CONFIG] [--merge]
 
 Logs in to \$DST, unpacks \$ARCHIVE and logs out again.
+The password is prompted for unless \$DST_PASSWORD is set in the config.
 
   -c, --config FILE   config file (default: transfer.env)
   --merge             add into an existing Project/Dataset with the same name

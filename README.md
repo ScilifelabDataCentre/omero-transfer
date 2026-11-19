@@ -66,9 +66,9 @@ finished file looks like this:
 SRC=omero-staging.c3se.chalmers.se       # server you copy FROM
 DST=omero.scilifelab.se                  # server you copy TO
 SRC_USER=gokhozsa                        # your username on the source server
-SRC_PASSWORD=                            # leave empty, you will be asked
+SRC_PASSWORD=                            # optional; if empty, omero login prompts interactively
 DST_USER=gokhozsa                        # your username on the target server
-DST_PASSWORD=                            # leave empty, you will be asked
+DST_PASSWORD=                            # optional; if empty, omero login prompts interactively
 GROUP=omero_test_20                      # group that owns the data
 OBJ=Dataset:1                            # what to copy
 ARCHIVE=~/omero-transfers/dataset1.zip   # where to put the archive on your computer
@@ -101,8 +101,9 @@ If it does not, read the warning it printed and see [Troubleshooting](#troublesh
 scripts/transfer.sh
 ```
 
-You will be asked for your password twice, once per server, and nothing is shown as you type. The
-script then packs the data, uploads it, and prints a summary.
+Unless you filled in the password fields, you will be asked for your password twice, once per
+server, and nothing is shown as you type. See [Passwords](#passwords). The script then packs the
+data, uploads it, and prints a summary.
 
 Packing downloads every original file, so a large project can take a long time. Leave the terminal
 window open until it finishes.
@@ -135,10 +136,8 @@ setting. See [Troubleshooting](#troubleshooting).
 
 ## Passwords
 
-Leave `SRC_PASSWORD` and `DST_PASSWORD` empty. The scripts will then ask you for each password
-when they need it, which is the safest option.
-
-You can put passwords in the settings file to run a transfer unattended, but be aware of what that
+`SRC_PASSWORD` and `DST_PASSWORD` are optional. If empty, the scripts will then ask you for each password
+when they need it, which is the safest option. If you put passwords in the settings file, be aware of what that
 means: the file stores them as ordinary readable text, and while the transfer runs, anyone else
 with an account on the same machine can see them in the list of running processes.
 
