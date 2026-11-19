@@ -19,20 +19,18 @@ file and run one command.
 Check all of these before your first transfer.
 
 - **uv is installed.** This is the tool that installs everything else. Run `uv --version` to check.
-  If it is missing, install it with:
-
+If it is missing, install it with:
   ```bash
   curl -LsSf https://astral.sh/uv/install.sh | sh
   ```
-
 - **You have an account on both servers.** The usernames can be different on each side.
 - **The group already exists on the target server,** and you are a member of it. A group is the
-  OMERO workspace that owns the data. The transfer will not create one for you.
+OMERO workspace that owns the data. The transfer will not create one for you.
 - **You have enough free disk space** for the archive, roughly the same size as the data you are
-  copying.
+copying.
 - **You know what you want to copy.** You need its type (Image, Dataset or Project) and its ID
-  number. In OMERO.web, click the item and the ID is shown in the right-hand panel, for example
-  `Dataset:1`.
+number. In OMERO.web, click the item and the ID is shown in the right-hand panel, for example
+`Dataset:1`.
 
 This works on macOS and on Linux x86_64. For anything else, see
 [Other platforms](docs/maintainers.md#other-platforms).
@@ -64,12 +62,12 @@ finished file looks like this:
 
 ```bash
 SRC=omero-staging.c3se.chalmers.se       # server you copy FROM
-DST=omero.scilifelab.se                  # server you copy TO
-SRC_USER=gokhozsa                        # your username on the source server
-SRC_PASSWORD=                            # optional; if empty, omero login prompts interactively
+DST=ssl://omero.scilifelab.se            # server you copy TO (IMPORTANT: add ssl:// prefix if you use SSO)
+SRC_USER=gokhozsa                        # your username on the source server or session key if you use SSO
+SRC_PASSWORD=                            # optional; if empty, omero login prompts interactively. Use session key if you use SSO.
 SRC_GROUP=omero_test_20                  # group that owns the data on the source server
-DST_USER=gokhozsa                        # your username on the target server
-DST_PASSWORD=                            # optional; if empty, omero login prompts interactively
+DST_USER=gokhozsa                        # your username on the target server or session key if you use SSO
+DST_PASSWORD=                            # optional; if empty, omero login prompts interactively. Use session key if you use SSO.
 DST_GROUP=omero_test_20                  # group to copy into on the target server
 OBJ=Dataset:1                            # what to copy
 ARCHIVE=~/omero-transfers/dataset1.zip   # where to put the archive on your computer
@@ -81,8 +79,8 @@ Three notes on this file:
 - Leave the two password lines empty. See [Passwords](docs/authentication.md#passwords) for why.
 - `transfer.env` is never committed to git, so your details stay on your machine.
 - If a later unpack finishes without copying any images, the target server needs `ssl://` in
-  front of its name. See
-  [Nothing was imported](docs/troubleshooting.md#nothing-was-imported).
+front of its name. See
+[Nothing was imported](docs/troubleshooting.md#nothing-was-imported).
 
 ### Step 3: Check that everything is ready
 
