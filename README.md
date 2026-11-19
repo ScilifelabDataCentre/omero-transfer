@@ -104,7 +104,8 @@ scripts/transfer.sh
 ```
 
 Unless you filled in the password fields, you will be asked for your password twice, once per
-server, and nothing is shown as you type. See
+server, and nothing is shown as you type. If a server refuses the login, you are asked again for
+both the username and the password. See
 [Passwords](docs/authentication.md#passwords). The script then packs the data, uploads it, and
 prints a summary.
 

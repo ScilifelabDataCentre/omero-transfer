@@ -157,6 +157,48 @@ user_label() {
     fi
 }
 
+# Filled in by ask_credentials.
+CRED_USER=""
+CRED_PASSWORD=""
+
+# Asks for both fields. A refused login is as often a wrong username as a
+# wrong password, and omero itself will only ever re-ask for the password.
+ask_credentials() {
+    local where="$1" default_user="$2" user="" password=""
+    [[ -t 0 && -t 1 ]] ||
+        die "cannot ask for credentials for $where: not running in a terminal"
+
+    # Never echo a session token back to the terminal, so offer the current
+    # username as a default only when it is an ordinary one.
+    if [[ "$(user_label "$default_user")" == "$default_user" ]]; then
+        read -r -p "Username for $where [$default_user]: " user
+        CRED_USER="${user:-$default_user}"
+    else
+        while [[ -z "$user" ]]; do
+            read -r -p "Username for $where: " user
+        done
+        CRED_USER="$user"
+    fi
+
+    while [[ -z "$password" ]]; do
+        read -r -s -p "Password for $where: " password
+        printf '\n' >&2
+    done
+    CRED_PASSWORD="$password"
+}
+
+# True when omero refused the credentials rather than failing for some other
+# reason. With stdin detached, omero's attempt to ask for another password
+# dies in _require_tty, and that request is itself the signal: it happens only
+# on PermissionDeniedException, not on a DNS or connection failure.
+credential_failure() {
+    case "$1" in
+        *"cannot request password"* | *"incorrect password attempts"* | \
+            *"Password check failed"* | *"Unknown user"*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 require_uv() {
     command -v uv >/dev/null 2>&1 ||
         die "uv is not installed, see https://docs.astral.sh/uv/getting-started/installation/"
@@ -174,15 +216,35 @@ trap logout_quietly EXIT
 # Usage: omero_login HOST GROUP USER [PASSWORD]
 omero_login() {
     local host="$1" group="$2" user="$3" password="${4:-}"
-    info "Logging in to $(host_only "$host") as $(user_label "$user") (group $group)"
+    local where attempt out status
+    where="$(host_only "$host")"
     conn_flags "$host"
-    if [[ -n "$password" ]]; then
-        omero login -u "$user" "${CONN_FLAGS[@]}" -g "$group" -w "$password"
-    else
-        omero login -u "$user" "${CONN_FLAGS[@]}" -g "$group"
+
+    if [[ -z "$password" ]]; then
+        ask_credentials "$where" "$user"
+        user="$CRED_USER" password="$CRED_PASSWORD"
     fi
-    LOGGED_IN=true
-    select_group "$host" "$group"
+
+    for attempt in 1 2 3; do
+        info "Logging in to $where as $(user_label "$user") (group $group)"
+        status=0
+        # stdin is detached so omero cannot start its own password-only retry.
+        out="$(omero login -u "$user" "${CONN_FLAGS[@]}" -g "$group" -w "$password" </dev/null 2>&1)" || status=$?
+        if [[ $status -eq 0 ]]; then
+            [[ -z "$out" ]] || printf '%s\n' "$out" >&2
+            LOGGED_IN=true
+            select_group "$host" "$group"
+            return
+        fi
+        credential_failure "$out" || {
+            printf '%s\n' "$out" >&2
+            die "could not log in to $where"
+        }
+        [[ $attempt -lt 3 ]] || die "could not log in to $where after 3 attempts"
+        warn "$where refused the login for $(user_label "$user")"
+        ask_credentials "$where" "$user"
+        user="$CRED_USER" password="$CRED_PASSWORD"
+    done
 }
 
 # OMERO does not guarantee the group asked for at login: it falls back to the
